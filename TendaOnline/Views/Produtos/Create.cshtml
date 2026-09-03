@@ -1,0 +1,91 @@
+﻿
+@model TendaOnline.Models.Produto
+
+
+@{
+    ViewData["Title"] = "Novo Produto";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="card-title mb-0">Cadastrar Novo Produto</h5>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="Nome" class="form-label fw-bold">Nome do Produto</label>
+                            <input asp-for="Nome" class="form-control" placeholder="Ex: Teclado Mecânico RGB" required />
+                            <span asp-validation-for="Nome" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="CodigoBarras" class="form-label fw-bold">Código de Barras</label>
+                            <input asp-for="CodigoBarras" class="form-control" placeholder="789..." />
+                            <span asp-validation-for="CodigoBarras" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label asp-for="CategoriaId" class="form-label fw-bold mb-0">Categoria</label>
+                                <a asp-controller="Categorias" asp-action="Create" target="_blank" class="small text-decoration-none">
+                                    + Cadastrar nova categoria
+                                </a>
+                            </div>
+                            <select asp-for="CategoriaId" class="form-select" asp-items="ViewBag.Categorias" required>
+                                <option value="">-- Selecione uma Categoria --</option>
+                            </select>
+                            <span asp-validation-for="CategoriaId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="EstoqueMinimo" class="form-label fw-bold">Estoque Mínimo (Alerta)</label>
+                            <input asp-for="EstoqueMinimo" type="number" min="0" class="form-control" />
+                            <span asp-validation-for="EstoqueMinimo" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PrecoCusto" class="form-label fw-bold">Preço de Custo (R$)</label>
+                            <input asp-for="PrecoCusto" type="number" step="0.01" min="0" class="form-control" placeholder="0,00" required />
+                            <span asp-validation-for="PrecoCusto" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PrecoVenda" class="form-label fw-bold">Preço de Venda (R$)</label>
+                            <input asp-for="PrecoVenda" type="number" step="0.01" min="0" class="form-control" placeholder="0,00" required />
+                            <span asp-validation-for="PrecoVenda" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Descricao" class="form-label fw-bold">Descrição / Especificações</label>
+                            <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Detalhes adicionais..."></textarea>
+                            <span asp-validation-for="Descricao" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" asp-for="Ativo" checked />
+                                <label class="form-check-label fw-bold" asp-for="Ativo">Produto ativo para comercialização</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary px-4">Salvar Produto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

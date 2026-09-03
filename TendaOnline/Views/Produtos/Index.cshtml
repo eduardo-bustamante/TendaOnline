@@ -1,0 +1,100 @@
+﻿@model IEnumerable<TendaOnline.Models.Produto>
+@{
+    ViewData["Title"] = "Catálogo de Produtos - TendaOnline";
+}
+
+@if (TempData["MensagemSucesso"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["MensagemSucesso"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Produtos e Estoque</h2>
+        <small class="text-muted">Gerencie o catálogo e monitore os níveis de reposição</small>
+    </div>
+    <a asp-action="Create" class="btn btn-primary shadow-sm">
+        <i class="bi bi-plus-lg"></i> Novo Produto
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Categoria</th>
+                    <th class="text-end">Custo</th>
+                    <th class="text-end">Preço Venda</th>
+                    <th class="text-center">Saldo Estoque</th>
+                    <th>Status Reposição</th>
+                    <th class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            Nenhum produto cadastrado até o momento.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        var estoqueCritico = item.QuantidadeEstoque <= item.EstoqueMinimo;
+                        <tr class="@(!item.Ativo ? "table-secondary text-muted" : "")">
+                            <td><code>@(string.IsNullOrEmpty(item.CodigoBarras) ? "S/C" : item.CodigoBarras)</code></td>
+                            <td>
+                                <strong>@item.Nome</strong>
+                                @if (!item.Ativo)
+                                {
+                                    <span class="badge bg-secondary ms-1">Inativo</span>
+                                }
+                            </td>
+                            <td>@item.Categoria?.Nome</td>
+                            <td class="text-end">@item.PrecoCusto.ToString("C")</td>
+                            <td class="text-end fw-semibold">@item.PrecoVenda.ToString("C")</td>
+                            <td class="text-center">
+                                <span class="badge @(estoqueCritico ? "bg-danger" : "bg-success") fs-6 px-3 py-2">
+                                    @item.QuantidadeEstoque un
+                                </span>
+                            </td>
+                            <td>
+                                @if (estoqueCritico)
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        Mínimo: @item.EstoqueMinimo un (Repor)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-success small fw-bold">Adequado</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="EntradaEstoque" asp-route-id="@item.Id" class="btn btn-sm btn-outline-success me-1">
+                                    + Entrada
+                                </a>
+                                <a asp-action="AjusteInventario" asp-route-id="@item.Id" 
+           class="btn btn-sm btn-outline-warning text-dark fw-semibold">
+            <i class="bi bi-clipboard-check"></i> Ajuste
+        </a>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>  

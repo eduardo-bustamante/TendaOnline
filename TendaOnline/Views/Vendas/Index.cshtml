@@ -1,0 +1,193 @@
+﻿@model IEnumerable<TendaOnline.Models.Venda>
+
+@{
+    ViewData["Title"] = "Histórico de Vendas";
+}
+
+@if (TempData["MensagemSucesso"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-2"></i> @TempData["MensagemSucesso"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensagemErro"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i> @TempData["MensagemErro"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-0 fw-bold">Histórico de Vendas</h2>
+        <small class="text-muted">Acompanhe as transações comerciais e gerencie cancelamentos</small>
+    </div>
+    <a asp-action="PDV" class="btn btn-success d-flex align-items-center gap-2 shadow-sm">
+        <i class="bi bi-cart-plus fs-5"></i>
+        <span>Nova Venda (PDV)</span>
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 90px;">Nº Venda</th>
+                    <th style="width: 170px;">Data/Hora</th>
+                    <th>Itens Vendidos</th>
+                    <th style="width: 150px;">Pagamento</th>
+                    <th class="text-end" style="width: 130px;">Total Líquido</th>
+                    <th style="width: 120px;" class="text-center">Status</th>
+                    <th class="text-center" style="width: 140px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model == null || !Model.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-receipt display-6 d-block mb-2 text-secondary"></i>
+                            Nenhuma venda registrada até o momento.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var venda in Model)
+                    {
+                        var isCancelada = venda.Observacoes != null && venda.Observacoes.Contains("[CANCELADA]");
+                        <tr class="@(isCancelada ? "table-light text-muted" : "")">
+                            <td>
+                                <strong class="fs-6">#@venda.Id</strong>
+                            </td>
+                            <td>
+                                <small class="d-block text-dark fw-semibold">
+                                    @venda.DataVenda.ToLocalTime().ToString("dd/MM/yyyy")
+                                </small>
+                                <small class="text-muted">
+                                    @venda.DataVenda.ToLocalTime().ToString("HH:mm:ss")
+                                </small>
+                            </td>
+                            <td>
+                                <ul class="list-unstyled mb-0 small">
+                                    @foreach (var item in venda.Itens.Take(3))
+                                    {
+                                        <li>
+                                            <span class="badge bg-secondary-subtle text-dark border me-1">@item.Quantidade x</span>
+                                            @(item.Produto?.Nome ?? "Produto")
+                                        </li>
+                                    }
+                                    @if (venda.Itens.Count > 3)
+                                    {
+                                        <li class="text-muted fst-italic">+ @(venda.Itens.Count - 3) outro(s) item(ns)...</li>
+                                    }
+                                </ul>
+                            </td>
+                            <td>
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                                    <i class="bi bi-credit-card me-1"></i> @venda.FormaPagamento
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <strong class="fs-6 @(isCancelada ? "text-decoration-line-through text-muted" : "text-success")">
+                                    @venda.ValorTotal.ToString("C")
+                                </strong>
+                                @if (venda.Desconto > 0)
+                                {
+                                    <small class="d-block text-muted" style="font-size: 0.75rem;">
+                                        Desc: @venda.Desconto.ToString("C")
+                                    </small>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (isCancelada)
+                                {
+                                    <span class="badge bg-danger">Cancelada</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Concluída</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <!-- Botão Ver Comprovante -->
+                                    <a asp-action="Comprovante" asp-route-id="@venda.Id" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       title="Ver / Imprimir Comprovante">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+
+                                    <!-- Botão Cancelar Venda -->
+                                    @if (!isCancelada)
+                                    {
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger" 
+                                                title="Cancelar Venda e Devolver ao Estoque"
+                                                onclick="abrirModalCancelamento(@venda.Id)">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal de Cancelamento de Venda -->
+<div class="modal fade" id="modalCancelar" tabindex="-1" aria-labelledby="modalCancelarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Cancelar" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="vendaIdCancelamento" name="vendaId" />
+
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="modalCancelarLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Cancelar Venda
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="mb-2">Tem certeza de que deseja cancelar a <strong>Venda #<span id="txtNumeroVenda"></span></strong>?</p>
+                    <div class="alert alert-warning small mb-3">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Todos os produtos desta venda retornarão imediatamente ao estoque disponível como devolução.
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="motivoCancelamento" class="form-label fw-bold">Motivo do Cancelamento</label>
+                        <textarea class="form-control" id="motivoCancelamento" name="motivoCancelamento" rows="3" 
+                                  placeholder="Ex: Cliente desistiu da compra, erro na forma de pagamento..." required></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Cancelamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function abrirModalCancelamento(vendaId) {
+        document.getElementById('vendaIdCancelamento').value = vendaId;
+        document.getElementById('txtNumeroVenda').innerText = vendaId;
+        document.getElementById('motivoCancelamento').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalCancelar'));
+        modal.show();
+    }
+</script>
+}

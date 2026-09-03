@@ -1,0 +1,215 @@
+﻿@using Microsoft.AspNetCore.Identity
+@model List<(IdentityUser Usuario, IList<string> Perfis)>
+
+@{
+    ViewData["Title"] = "Gerenciar Usuários";
+    var idLogado = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+@if (TempData["MensagemSucesso"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-2"></i> @TempData["MensagemSucesso"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["MensagemErro"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i> @TempData["MensagemErro"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0 fw-bold">Operadores & Acessos</h2>
+        <small class="text-muted">Gerencie permissões, altere credenciais ou revogue acessos</small>
+    </div>
+    <a asp-action="Registrar" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
+        <i class="bi bi-person-plus-fill"></i>
+        <span>+ Novo Usuário</span>
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Usuário / E-mail</th>
+                    <th style="width: 200px;">Nível de Acesso</th>
+                    <th style="width: 120px;" class="text-center">Status</th>
+                    <th style="width: 180px;" class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var perfil = item.Perfis.FirstOrDefault() ?? "Sem Perfil";
+                    var ehProprioUsuario = item.Usuario.Id == idLogado;
+
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-light border p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                    <i class="bi bi-person text-secondary fs-5"></i>
+                                </div>
+                                <div>
+                                    <strong class="d-block text-dark">
+                                        @item.Usuario.Email
+                                        @if (ehProprioUsuario)
+                                        {
+                                            <span class="badge bg-secondary-subtle text-dark border ms-1" style="font-size: 0.7rem;">(Você)</span>
+                                        }
+                                    </strong>
+                                    <small class="text-muted">ID: @item.Usuario.Id</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge @(perfil == "Admin" ? "bg-dark" : "bg-primary") px-3 py-2">
+                                @(perfil == "Admin" ? "Administrador" : "Operador de Caixa")
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                Ativo
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="d-inline-flex gap-1">
+                                <!-- Editar -->
+                                <a asp-action="Editar" asp-route-id="@item.Usuario.Id" 
+                                   class="btn btn-sm btn-outline-secondary" title="Editar E-mail e Perfil">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <!-- Resetar Senha -->
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-warning text-dark" 
+                                        title="Redefinir Senha"
+                                        onclick="abrirModalResetSenha('@item.Usuario.Id', '@item.Usuario.Email')">
+                                    <i class="bi bi-key"></i>
+                                </button>
+
+                                <!-- Excluir (Bloqueado para a própria conta) -->
+                                @if (!ehProprioUsuario)
+                                {
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            title="Excluir Acesso Permanentemente"
+                                            onclick="abrirModalExcluir('@item.Usuario.Id', '@item.Usuario.Email')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-secondary disabled" title="Autoexclusão não permitida">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Reset de Senha -->
+<div class="modal fade" id="modalResetSenha" tabindex="-1" aria-labelledby="modalResetSenhaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="ResetarSenha" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="resetUsuarioId" name="UsuarioId" />
+
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold" id="modalResetSenhaLabel">
+                        <i class="bi bi-key-fill me-2"></i> Redefinir Senha de Acesso
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="mb-3">
+                        Redefinindo senha para o usuário: <br />
+                        <strong class="text-primary" id="resetUsuarioEmail"></strong>
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="NovaSenha" class="form-label fw-bold">Nova Senha</label>
+                        <input type="password" class="form-control" id="NovaSenha" name="NovaSenha" minlength="6" placeholder="Mínimo 6 caracteres" required />
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="ConfirmarNovaSenha" class="form-label fw-bold">Confirmar Nova Senha</label>
+                        <input type="password" class="form-control" id="ConfirmarNovaSenha" name="ConfirmarNovaSenha" minlength="6" placeholder="Repita a nova senha" required />
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold">Salvar Nova Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Excluir Usuário -->
+<div class="modal fade" id="modalExcluirUsuario" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Excluir" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="excluirUsuarioId" name="id" />
+
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold" id="modalExcluirLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Confirmar Exclusão
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="mb-2">Deseja realmente remover o acesso do usuário:</p>
+                    <div class="alert alert-light border fw-bold text-danger mb-3" id="excluirUsuarioEmail"></div>
+                    <p class="small text-muted mb-0">
+                        Esta ação revoga imediatamente o login e remove as credenciais do sistema.
+                    </p>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger fw-semibold">Confirmar Exclusão</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function abrirModalResetSenha(usuarioId, email) {
+        document.getElementById('resetUsuarioId').value = usuarioId;
+        document.getElementById('resetUsuarioEmail').innerText = email;
+        document.getElementById('NovaSenha').value = '';
+        document.getElementById('ConfirmarNovaSenha').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalResetSenha'));
+        modal.show();
+    }
+
+    function abrirModalExcluir(usuarioId, email) {
+        document.getElementById('excluirUsuarioId').value = usuarioId;
+        document.getElementById('excluirUsuarioEmail').innerText = email;
+
+        const modal = new bootstrap.Modal(document.getElementById('modalExcluirUsuario'));
+        modal.show();
+    }
+</script>
+}

@@ -1,0 +1,59 @@
+﻿@model TendaOnline.Models.ViewModels.MovimentacaoEstoqueViewModel
+
+@{
+    ViewData["Title"] = "Entrada de Estoque";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white py-3">
+                <h5 class="card-title mb-0">Registrar Entrada de Mercadoria</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-light border mb-4">
+                    <div class="fw-bold fs-5 text-dark">@Model.NomeProduto</div>
+                    <small class="text-muted">Saldo Atual em Prateleira:</small>
+                    <span class="badge bg-secondary fs-6 ms-1">@Model.SaldoAtual un</span>
+                </div>
+
+                <form asp-action="EntradaEstoque" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <input type="hidden" asp-for="ProdutoId" />
+                    <input type="hidden" asp-for="NomeProduto" />
+                    <input type="hidden" asp-for="SaldoAtual" />
+
+                    <div class="mb-3">
+                        <label asp-for="Quantidade" class="form-label fw-bold">Quantidade Recebida</label>
+                        <input asp-for="Quantidade" type="number" min="1" class="form-control form-control-lg" placeholder="Ex: 10" required />
+                        <span asp-validation-for="Quantidade" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CustoUnitario" class="form-label fw-bold">Custo Unitário da Compra (R$)</label>
+                        <input asp-for="CustoUnitario" type="number" step="0.01" min="0.01" class="form-control" required />
+                        <span asp-validation-for="CustoUnitario" class="text-danger small"></span>
+                        <div class="form-text">Atualizará a referência de preço de custo do produto.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Motivo" class="form-label fw-bold">Documento / Observação</label>
+                        <input asp-for="Motivo" class="form-control" placeholder="Ex: NF 45892, Fornecedor X, Reposição" />
+                        <span asp-validation-for="Motivo" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success px-4">Confirmar Entrada</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,269 @@
+﻿@using System.Text.Json
+@model TendaOnline.DTOs.Vendas.CriarVendaDto
+
+@{
+    ViewData["Title"] = "Frente de Caixa - PDV";
+    var produtosJson = JsonSerializer.Serialize(ViewBag.ProdutosDisponiveis);
+}
+
+<div class="row g-4">
+    <!-- Coluna Esquerda: Adição de Produtos -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="card-title mb-0">Seleção de Itens</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-7">
+                        <label class="form-label fw-bold">Produto</label>
+                        <select id="selectProduto" class="form-select">
+                            <option value="">-- Selecione o Produto --</option>
+                            @foreach (var prod in ViewBag.ProdutosDisponiveis)
+                            {
+                                <option value="@prod.Id"
+                                        data-preco="@prod.PrecoVenda"
+                                        data-estoque="@prod.QuantidadeEstoque"
+                                        data-nome="@prod.Nome">
+                                    @prod.Nome (Estoque: @prod.QuantidadeEstoque un) - R$ @prod.PrecoVenda.ToString("F2")
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Qtd.</label>
+                        <input id="inputQtd" type="number" min="1" value="1" class="form-control" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" id="btnAdicionarItem" class="btn btn-primary w-100">
+                            + Incluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grade do Carrinho -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-light py-3">
+                <h6 class="mb-0 fw-bold">Itens da Venda</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" id="tabelaCarrinho">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produto</th>
+                            <th class="text-center" style="width: 100px;">Qtd</th>
+                            <th class="text-end" style="width: 120px;">Unitário</th>
+                            <th class="text-end" style="width: 120px;">Subtotal</th>
+                            <th class="text-center" style="width: 60px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoCarrinho">
+                        <tr id="linhaVazia">
+                            <td colspan="5" class="text-center text-muted py-4">
+                                Nenhum item adicionado ao caixa.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coluna Direita: Fechamento Financeiro -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="card-title mb-0">Totalização e Pagamento</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Subtotal Bruto:</span>
+                    <strong class="fs-5" id="lblSubtotal">R$ 0,00</strong>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Desconto (R$)</label>
+                    <input type="number" id="inputDesconto" min="0" step="0.01" value="0.00" class="form-control" />
+                </div>
+
+                <div class="border-top pt-3 mb-4 d-flex justify-content-between align-items-center">
+                    <span class="fs-5 fw-bold text-dark">Total a Cobrar:</span>
+                    <span class="fs-3 fw-bolder text-success" id="lblTotalLiquido">R$ 0,00</span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Forma de Pagamento</label>
+                    <select id="selectPagamento" class="form-select" asp-items="ViewBag.FormasPagamento">
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Observações / Cupom</label>
+                    <textarea id="txtObservacoes" rows="2" class="form-control" placeholder="Opcional..."></textarea>
+                </div>
+
+                <button type="button" id="btnFinalizar" class="btn btn-success btn-lg w-100 py-3 fw-bold shadow-sm" disabled>
+                    Finalizar Venda
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        let carrinho = [];
+        const produtos = @Html.Raw(produtosJson);
+
+        const selectProduto = document.getElementById('selectProduto');
+        const inputQtd = document.getElementById('inputQtd');
+        const btnAdicionarItem = document.getElementById('btnAdicionarItem');
+        const corpoCarrinho = document.getElementById('corpoCarrinho');
+        const lblSubtotal = document.getElementById('lblSubtotal');
+        const lblTotalLiquido = document.getElementById('lblTotalLiquido');
+        const inputDesconto = document.getElementById('inputDesconto');
+        const btnFinalizar = document.getElementById('btnFinalizar');
+
+        btnAdicionarItem.addEventListener('click', () => {
+            const produtoId = parseInt(selectProduto.value);
+            const qtd = parseInt(inputQtd.value);
+
+            if (!produtoId) {
+                alert('Selecione um produto.');
+                return;
+            }
+
+            if (isNaN(qtd) || qtd <= 0) {
+                alert('Informe uma quantidade válida.');
+                return;
+            }
+
+            const produtoRef = produtos.find(p => p.Id === produtoId);
+            if (!produtoRef) return;
+
+            const itemExistente = carrinho.find(i => i.produtoId === produtoId);
+            const qtdTotalPretendida = (itemExistente ? itemExistente.quantidade : 0) + qtd;
+
+            if (qtdTotalPretendida > produtoRef.QuantidadeEstoque) {
+                alert(`Saldo indisponível! Estoque atual: ${produtoRef.QuantidadeEstoque} un.`);
+                return;
+            }
+
+            if (itemExistente) {
+                itemExistente.quantidade += qtd;
+            } else {
+                carrinho.push({
+                    produtoId: produtoRef.Id,
+                    nome: produtoRef.Nome,
+                    preco: produtoRef.PrecoVenda,
+                    quantidade: qtd
+                });
+            }
+
+            selectProduto.value = '';
+            inputQtd.value = 1;
+            renderizarCarrinho();
+        });
+
+        function removerItem(produtoId) {
+            carrinho = carrinho.filter(i => i.produtoId !== produtoId);
+            renderizarCarrinho();
+        }
+
+        function renderizarCarrinho() {
+            corpoCarrinho.innerHTML = '';
+
+            if (carrinho.length === 0) {
+                corpoCarrinho.innerHTML = `
+                    <tr id="linhaVazia">
+                        <td colspan="5" class="text-center text-muted py-4">Nenhum item adicionado ao caixa.</td>
+                    </tr>`;
+                btnFinalizar.disabled = true;
+                atualizarTotais(0);
+                return;
+            }
+
+            btnFinalizar.disabled = false;
+            let subtotal = 0;
+
+            carrinho.forEach(item => {
+                const linhaSubtotal = item.quantidade * item.preco;
+                subtotal += linhaSubtotal;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${item.nome}</strong></td>
+                    <td class="text-center">${item.quantidade}</td>
+                    <td class="text-end">R$ ${item.preco.toFixed(2).replace('.', ',')}</td>
+                    <td class="text-end fw-bold">R$ ${linhaSubtotal.toFixed(2).replace('.', ',')}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-danger" onclick="removerItem(${item.produtoId})">&times;</button>
+                    </td>
+                `;
+                corpoCarrinho.appendChild(tr);
+            });
+
+            atualizarTotais(subtotal);
+        }
+
+        function atualizarTotais(subtotal) {
+            const desconto = parseFloat(inputDesconto.value) || 0;
+            const totalLiquido = Math.max(0, subtotal - desconto);
+
+            lblSubtotal.innerText = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+            lblTotalLiquido.innerText = `R$ ${totalLiquido.toFixed(2).replace('.', ',')}`;
+        }
+
+        inputDesconto.addEventListener('input', () => {
+            let subtotal = carrinho.reduce((acc, i) => acc + (i.quantidade * i.preco), 0);
+            atualizarTotais(subtotal);
+        });
+
+        btnFinalizar.addEventListener('click', async () => {
+            if (carrinho.length === 0) return;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const dto = {
+                formaPagamento: parseInt(document.getElementById('selectPagamento').value),
+                desconto: parseFloat(inputDesconto.value) || 0,
+                observacoes: document.getElementById('txtObservacoes').value,
+                itens: carrinho.map(i => ({
+                    produtoId: i.produtoId,
+                    quantidade: i.quantidade
+                }))
+            };
+
+            btnFinalizar.disabled = true;
+            btnFinalizar.innerText = 'Processando...';
+
+            try {
+                const resp = await fetch('/Vendas/PDV', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify(dto)
+                });
+
+                const result = await resp.json();
+
+                if (resp.ok && result.sucesso) {
+                    window.location.href = `/Vendas/Comprovante/${result.vendaId}`;
+                } else {
+                    alert(`Erro: ${result.mensagem || 'Falha ao processar venda.'}`);
+                    btnFinalizar.disabled = false;
+                    btnFinalizar.innerText = 'Finalizar Venda';
+                }
+            } catch (err) {
+                alert('Falha na comunicação com o servidor.');
+                btnFinalizar.disabled = false;
+                btnFinalizar.innerText = 'Finalizar Venda';
+            }
+        });
+    </script>
+}

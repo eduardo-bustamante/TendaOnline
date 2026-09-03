@@ -1,0 +1,68 @@
+﻿@model TendaOnline.DTOs.Vendas.VendaResponseDto
+
+@{
+    ViewData["Title"] = $"Comprovante da Venda #{Model.Id}";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0 p-4">
+            <div class="text-center border-bottom pb-3 mb-3">
+                <h3 class="fw-bold mb-1">TendaOnline</h3>
+                <small class="text-muted">Comprovante de Venda</small>
+                <div class="mt-2 fw-semibold">Venda #@Model.Id</div>
+                <small class="text-muted">@Model.DataVenda.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</small>
+            </div>
+
+            <table class="table table-sm mb-3">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th class="text-center">Qtd</th>
+                        <th class="text-end">Unit.</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Itens)
+                    {
+                        <tr>
+                            <td>@item.NomeProduto</td>
+                            <td class="text-center">@item.Quantidade</td>
+                            <td class="text-end">@item.PrecoUnitario.ToString("C")</td>
+                            <td class="text-end">@item.Subtotal.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="border-top pt-2">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Desconto:</span>
+                    <span>@Model.Desconto.ToString("C")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Forma de Pagamento:</span>
+                    <strong>@Model.FormaPagamento</strong>
+                </div>
+                <div class="d-flex justify-content-between fs-4 fw-bold text-success border-top pt-2">
+                    <span>Total Pago:</span>
+                    <span>@Model.ValorTotal.ToString("C")</span>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Observacoes))
+            {
+                <div class="alert alert-light border small mt-3 mb-0">
+                    <strong>Obs:</strong> @Model.Observacoes
+                </div>
+            }
+
+            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top d-print-none">
+                <a asp-action="PDV" class="btn btn-primary">+ Nova Venda (PDV)</a>
+                <a asp-controller="Produtos" asp-action="Index" class="btn btn-outline-secondary">Ver Estoque</a>
+                <button onclick="window.print()" class="btn btn-dark">Imprimir</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,60 @@
+﻿@model IEnumerable<TendaOnline.Models.Categoria>
+
+@{
+    ViewData["Title"] = "Categorias";
+}
+
+@if (TempData["MensagemSucesso"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["MensagemSucesso"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Categorias de Produtos</h2>
+    <div>
+        <a asp-controller="Produtos" asp-action="Create" class="btn btn-outline-secondary me-2">Voltar ao Produto</a>
+        <a asp-action="Create" class="btn btn-primary">+ Nova Categoria</a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 80px;">Id</th>
+                    <th>Nome</th>
+                    <th style="width: 120px;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model == null || !Model.Any())
+                {
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">
+                            Nenhuma categoria cadastrada.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var cat in Model)
+                    {
+                        <tr>
+                            <td>@cat.Id</td>
+                            <td><strong>@cat.Nome</strong></td>
+                            <td>
+                                <span class="badge @(cat.Ativo ? "bg-success" : "bg-secondary")">
+                                    @(cat.Ativo ? "Ativo" : "Inativo")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

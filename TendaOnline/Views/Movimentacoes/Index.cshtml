@@ -1,0 +1,135 @@
+﻿@using TendaOnline.Models.Enums
+@model TendaOnline.Models.ViewModels.FiltroMovimentacaoViewModel
+
+@{
+    ViewData["Title"] = "Auditoria de Estoque";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0 fw-bold">Extrato de Movimentações</h2>
+        <small class="text-muted">Trilha de auditoria: compras, vendas, perdas e ajustes manuais</small>
+    </div>
+    <a asp-controller="Produtos" asp-action="Index" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+        <i class="bi bi-arrow-left"></i> Voltar aos Produtos
+    </a>
+</div>
+
+<!-- Filtros de Busca -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form asp-action="Index" method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">Produto</label>
+                <select asp-for="ProdutoId" class="form-select form-select-sm" asp-items="Model.ListaProdutos">
+                    <option value="">-- Todos os Produtos --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">Tipo de Movimento</label>
+                <select asp-for="Tipo" class="form-select form-select-sm" asp-items="Model.ListaTipos">
+                    <option value="">-- Todos os Tipos --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">De</label>
+                <input asp-for="DataInicio" type="date" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">Até</label>
+                <input asp-for="DataFim" type="date" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+                <a asp-action="Index" class="btn btn-light btn-sm border" title="Limpar Filtros">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabela de Movimentações -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 160px;">Data/Hora</th>
+                    <th>Produto</th>
+                    <th style="width: 170px;">Tipo de Operação</th>
+                    <th class="text-center" style="width: 120px;">Quantidade</th>
+                    <th class="text-end" style="width: 130px;">Custo Unit.</th>
+                    <th>Documento / Motivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Movimentacoes.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-clock-history fs-2 d-block mb-2 text-secondary"></i>
+                            Nenhuma movimentação encontrada para os filtros selecionados.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var mov in Model.Movimentacoes)
+                    {
+                        var isEntrada = mov.Tipo == TipoMovimentacao.EntradaCompra || mov.Tipo == TipoMovimentacao.Devolucao;
+                        var badgeClass = mov.Tipo switch
+                        {
+                            TipoMovimentacao.EntradaCompra => "bg-success",
+                            TipoMovimentacao.SaidaVenda => "bg-primary",
+                            TipoMovimentacao.Devolucao => "bg-info text-dark",
+                            TipoMovimentacao.PerdaOuAvaria => "bg-danger",
+                            TipoMovimentacao.AjusteInventario => "bg-warning text-dark",
+                            _ => "bg-secondary"
+                        };
+
+                        <tr>
+                            <td>
+                                <span class="d-block fw-semibold text-dark">
+                                    @mov.DataMovimentacao.ToLocalTime().ToString("dd/MM/yyyy")
+                                </span>
+                                <small class="text-muted">
+                                    @mov.DataMovimentacao.ToLocalTime().ToString("HH:mm:ss")
+                                </small>
+                            </td>
+                            <td>
+                                <strong>@(mov.Produto?.Nome ?? "Produto Removido")</strong>
+                                <small class="d-block text-muted">Cód: @(mov.Produto?.CodigoBarras ?? "S/C")</small>
+                            </td>
+                            <td>
+                                <span class="badge @badgeClass px-2 py-1">
+                                    @mov.Tipo
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-bold @(isEntrada ? "text-success" : "text-danger")">
+                                    @(isEntrada ? "+" : "-")@mov.Quantidade un
+                                </span>
+                            </td>
+                            <td class="text-end text-muted">
+                                @mov.CustoUnitario.ToString("C")
+                            </td>
+                            <td>
+                                <span class="text-dark small">@mov.Motivo</span>
+                                @if (mov.VendaId.HasValue)
+                                {
+                                    <a asp-controller="Vendas" asp-action="Comprovante" asp-route-id="@mov.VendaId.Value" 
+                                       class="badge bg-light text-primary border text-decoration-none ms-1">
+                                        Venda #@mov.VendaId.Value
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

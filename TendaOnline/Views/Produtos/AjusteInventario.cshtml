@@ -1,0 +1,115 @@
+﻿@model TendaOnline.Models.ViewModels.AjusteInventarioViewModel
+
+@{
+    ViewData["Title"] = "Ajuste de Inventário";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning text-dark py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-clipboard-check me-2"></i> Contagem Física de Prateleira
+                </h5>
+                <span class="badge bg-dark text-white">ID: #@Model.ProdutoId</span>
+            </div>
+
+            <div class="card-body p-4">
+                <!-- Painel Informativo do Produto -->
+                <div class="alert alert-light border mb-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="fw-bold mb-1">@Model.NomeProduto</h5>
+                            <div class="text-muted small">
+                                <span>Categoria: <strong>@(Model.CategoriaNome ?? "Geral")</strong></span>
+                                <span class="mx-2">•</span>
+                                <span>Código: <strong>@(string.IsNullOrEmpty(Model.CodigoBarras) ? "S/C" : Model.CodigoBarras)</strong></span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted d-block">Saldo no Sistema:</small>
+                            <span class="badge bg-secondary fs-6" id="badgeSaldoSistema">@Model.SaldoSistema un</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-action="AjusteInventario" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <input type="hidden" asp-for="ProdutoId" />
+                    <input type="hidden" asp-for="NomeProduto" />
+                    <input type="hidden" asp-for="SaldoSistema" id="inputSaldoSistema" />
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-7">
+                            <label asp-for="NovoEstoqueFisico" class="form-label fw-bold">
+                                Contagem Física Real (Prateleira)
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <input asp-for="NovoEstoqueFisico" type="number" min="0" 
+                                       class="form-control text-center fw-bold" id="inputEstoqueFisico" required />
+                                <span class="input-group-text">un</span>
+                            </div>
+                            <span asp-validation-for="NovoEstoqueFisico" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Card Dinâmico de Divergência -->
+                        <div class="col-md-5 d-flex align-items-end">
+                            <div class="card border w-100 p-2 text-center" id="cardDivergencia">
+                                <small class="text-muted fw-semibold">Divergência Apurada</small>
+                                <span class="fs-4 fw-bold" id="lblDivergencia">0 un</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Motivo" class="form-label fw-bold">Motivo do Ajuste / Observações</label>
+                        <input asp-for="Motivo" class="form-control" 
+                               placeholder="Ex: Contagem de inventário mensal, item danificado, erro de bipagem anterior" required />
+                        <span asp-validation-for="Motivo" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-warning px-4 fw-semibold text-dark shadow-sm">
+                            <i class="bi bi-check-circle me-1"></i> Confirmar Novo Saldo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+        const saldoSistema = parseInt(document.getElementById('inputSaldoSistema').value);
+        const inputFisico = document.getElementById('inputEstoqueFisico');
+        const lblDivergencia = document.getElementById('lblDivergencia');
+        const cardDivergencia = document.getElementById('cardDivergencia');
+
+        function recalcularDivergencia() {
+            const valorFisico = parseInt(inputFisico.value) || 0;
+            const diferenca = valorFisico - saldoSistema;
+
+            if (diferenca === 0) {
+                lblDivergencia.innerText = "0 un (Sem alteração)";
+                lblDivergencia.className = "fs-5 fw-bold text-secondary";
+                cardDivergencia.className = "card border w-100 p-2 text-center bg-light";
+            } else if (diferenca > 0) {
+                lblDivergencia.innerText = `+${diferenca} un (Sobra)`;
+                lblDivergencia.className = "fs-5 fw-bold text-success";
+                cardDivergencia.className = "card border-success border-opacity-50 w-100 p-2 text-center bg-success-subtle";
+            } else {
+                lblDivergencia.innerText = `${diferenca} un (Falta)`;
+                lblDivergencia.className = "fs-5 fw-bold text-danger";
+                cardDivergencia.className = "card border-danger border-opacity-50 w-100 p-2 text-center bg-danger-subtle";
+            }
+        }
+
+        inputFisico.addEventListener('input', recalcularDivergencia);
+        recalcularDivergencia();
+    </script>
+}
